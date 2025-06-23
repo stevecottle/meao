@@ -1,0 +1,4 @@
+geopy>=2.0.0
+streamlit>=1.0.0
+requests>=2.25.1  # If you use TFL API
+aiohttp>=3.8.0    # If using async calls
