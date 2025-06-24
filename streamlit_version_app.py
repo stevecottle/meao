@@ -50,54 +50,59 @@ def get_travel_time(start_station_id, end_station_id, api_key, retries=3):
         return None
 
 # --- Streamlit UI ---
-st.title("🚇 Tube Meetup Planner")
+st.title("🚇 Meet Everyone At Once")
 
-# Input Mode Selection - Default to "Station Dropdown"
+# Initialize session state for number of people
+if 'num_people' not in st.session_state:
+    st.session_state.num_people = 2  # Default to 2 people
+
+# Input Mode Selection
 input_mode = st.radio(
     "Input Mode:",
-    ["Station Dropdown", "Coordinates"],  # Reversed order
-    index=0,  # Default to first option ("Station Dropdown")
+    ["Station Dropdown", "Coordinates"],
+    index=0,
     horizontal=True
+)
+
+# People selector
+st.session_state.num_people = st.selectbox(
+    "Number of travelers",
+    [2, 3, 4, 5],
+    index=0
 )
 
 # Initialize users list
 users = []
+stations_data = load_stations("tube_stations.csv")
 
-# Changed logic to check for "Station Dropdown" first
+# Vertical layout for dropdowns
 if input_mode == "Station Dropdown":
-    stations_data = load_stations("tube_stations.csv")
-    st.header("Select User Stations")
+    st.header("Select Stations")
     
-    # Vertical layout for dropdowns
-    st.subheader("Person 1")
-    user1_station = st.selectbox(
-        "Starting-station for Person 1",
-        stations_data['Station'].tolist(),
-        key="station1"
-    )
-    if user1_station:
-        station = stations_data[stations_data['Station'] == user1_station].iloc[0]
+    # Required travelers (first 2)
+    for i in range(2):
+        st.subheader(f"Person {i+1} (Required)")
+        selected = st.selectbox(
+            f"Select station for Person {i+1}",
+            stations_data['Station'].tolist(),
+            key=f"station_{i}"
+        )
+        station = stations_data[stations_data['Station'] == selected].iloc[0]
         users.append((station['Latitude'], station['Longitude']))
     
-    st.subheader("Person 2")
-    user2_station = st.selectbox(
-        "Starting-station for Person 2",
-        stations_data['Station'].tolist(),
-        key="station2"
-    )
-    if user2_station:
-        station = stations_data[stations_data['Station'] == user2_station].iloc[0]
-        users.append((station['Latitude'], station['Longitude']))
-    
-    st.subheader("Person 3") 
-    user3_station = st.selectbox(
-        "Starting-station for Person 3 (optional)",
-        ["-- Not Selected --"] + stations_data['Station'].tolist(),
-        key="station3"
-    )
-    if user3_station != "-- Not Selected --":
-        station = stations_data[stations_data['Station'] == user3_station].iloc[0]
-        users.append((station['Latitude'], station['Longitude']))
+    # Optional additional travelers
+    if st.session_state.num_people > 2:
+        with st.expander(f"Additional travelers (up to {st.session_state.num_people})", expanded=True):
+            for i in range(2, st.session_state.num_people):
+                st.subheader(f"Person {i+1} (Optional)")
+                selected = st.selectbox(
+                    f"Select station for Person {i+1}",
+                    ["-- Not Selected --"] + stations_data['Station'].tolist(),
+                    key=f"station_{i}"
+                )
+                if selected != "-- Not Selected --":
+                    station = stations_data[stations_data['Station'] == selected].iloc[0]
+                    users.append((station['Latitude'], station['Longitude']))
 else:  # Coordinates mode
     st.header("Enter User Coordinates")
     cols = st.columns(3)
