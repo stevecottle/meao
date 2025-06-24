@@ -52,27 +52,19 @@ def get_travel_time(start_station_id, end_station_id, api_key, retries=3):
 # --- Streamlit UI ---
 st.title("🚇 Tube Meetup Planner")
 
-# Input Mode Selection
+# Input Mode Selection - Default to "Station Dropdown"
 input_mode = st.radio(
     "Input Mode:",
-    ["Coordinates", "Station Names"],
+    ["Station Dropdown", "Coordinates"],  # Reversed order
+    index=0,  # Default to first option ("Station Dropdown")
     horizontal=True
 )
 
 # Initialize users list
 users = []
 
-if input_mode == "Coordinates":
-    st.header("Enter User Coordinates")
-    cols = st.columns(3)
-    for i in range(3):  # For 3 users
-        with cols[i]:
-            st.subheader(f"User {i+1}")
-            lat = st.number_input("Latitude", key=f"lat{i}")
-            lon = st.number_input("Longitude", key=f"lon{i}")
-            if lat and lon:  # Only add if both values exist
-                users.append((lat, lon))
-else:
+# Changed logic to check for "Station Dropdown" first
+if input_mode == "Station Dropdown":
     stations_data = load_stations("tube_stations.csv")
     st.header("Select User Stations")
     cols = st.columns(3)
@@ -87,6 +79,16 @@ else:
             if selected:
                 station = stations_data[stations_data['Station'] == selected].iloc[0]
                 users.append((station['Latitude'], station['Longitude']))
+else:  # Coordinates mode
+    st.header("Enter User Coordinates")
+    cols = st.columns(3)
+    for i in range(3):
+        with cols[i]:
+            st.subheader(f"User {i+1}")
+            lat = st.number_input("Latitude", key=f"lat{i}")
+            lon = st.number_input("Longitude", key=f"lon{i}")
+            if lat and lon:
+                users.append((lat, lon))
 
 # API Key (consider using st.secrets in production)
 api_key = "f234cac01ae545d2991cc51681a2f820"
