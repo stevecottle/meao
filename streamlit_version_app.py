@@ -78,6 +78,7 @@ st.title("🚇 Meet everyone at once, London!")
 
 # Input Mode Selection
 input_mode = st.radio(
+    "Choose input method:",
     ["Stations", "Coordinates"],
     index=0,
     horizontal=True
