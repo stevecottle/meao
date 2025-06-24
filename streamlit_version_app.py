@@ -67,18 +67,37 @@ users = []
 if input_mode == "Station Dropdown":
     stations_data = load_stations("tube_stations.csv")
     st.header("Select User Stations")
-    cols = st.columns(3)
-    for i in range(3):  # For 3 users
-        with cols[i]:
-            st.subheader(f"User {i+1}")
-            selected = st.selectbox(
-                "Station",
-                stations_data['Station'].tolist(),
-                key=f"station{i}"
-            )
-            if selected:
-                station = stations_data[stations_data['Station'] == selected].iloc[0]
-                users.append((station['Latitude'], station['Longitude']))
+    
+    # Vertical layout for dropdowns
+    st.subheader("User 1")
+    user1_station = st.selectbox(
+        "Select station for User 1",
+        stations_data['Station'].tolist(),
+        key="station1"
+    )
+    if user1_station:
+        station = stations_data[stations_data['Station'] == user1_station].iloc[0]
+        users.append((station['Latitude'], station['Longitude']))
+    
+    st.subheader("User 2")
+    user2_station = st.selectbox(
+        "Select station for User 2",
+        stations_data['Station'].tolist(),
+        key="station2"
+    )
+    if user2_station:
+        station = stations_data[stations_data['Station'] == user2_station].iloc[0]
+        users.append((station['Latitude'], station['Longitude']))
+    
+    st.subheader("User 3 (Optional)")
+    user3_station = st.selectbox(
+        "Select station for User 3 (optional)",
+        ["-- Not Selected --"] + stations_data['Station'].tolist(),
+        key="station3"
+    )
+    if user3_station != "-- Not Selected --":
+        station = stations_data[stations_data['Station'] == user3_station].iloc[0]
+        users.append((station['Latitude'], station['Longitude']))
 else:  # Coordinates mode
     st.header("Enter User Coordinates")
     cols = st.columns(3)
