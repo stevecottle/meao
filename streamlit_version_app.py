@@ -69,9 +69,9 @@ if input_mode == "Station Dropdown":
     st.header("Select User Stations")
     
     # Vertical layout for dropdowns
-    st.subheader("User 1")
+    st.subheader("Person 1")
     user1_station = st.selectbox(
-        "Select station for User 1",
+        "Select station for Person 1",
         stations_data['Station'].tolist(),
         key="station1"
     )
@@ -79,9 +79,9 @@ if input_mode == "Station Dropdown":
         station = stations_data[stations_data['Station'] == user1_station].iloc[0]
         users.append((station['Latitude'], station['Longitude']))
     
-    st.subheader("User 2")
+    st.subheader("Person 2")
     user2_station = st.selectbox(
-        "Select station for User 2",
+        "Select station for Person 2",
         stations_data['Station'].tolist(),
         key="station2"
     )
@@ -89,7 +89,7 @@ if input_mode == "Station Dropdown":
         station = stations_data[stations_data['Station'] == user2_station].iloc[0]
         users.append((station['Latitude'], station['Longitude']))
     
-    st.subheader("User 3 (Optional)")
+    st.subheader("Person 3"), st.paragraph("(Optional)")
     user3_station = st.selectbox(
         "Select station for User 3 (optional)",
         ["-- Not Selected --"] + stations_data['Station'].tolist(),
