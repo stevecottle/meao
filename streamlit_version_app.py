@@ -24,12 +24,12 @@ def precompute_distances(stations):
     return distance_matrix
 
 # --- TFL API Functions ---
-def get_travel_time(start_station_id, end_station_id, api_key, retries=3):
+def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retries=3):
     if start_station_id == end_station_id:
-        return None
+        return None, []
     
     url = f"https://api.tfl.gov.uk/Journey/JourneyResults/{start_station_id}/to/{end_station_id}"
-    params = {"app_key": api_key, "mode": "tube"}
+    params = {"app_key": api_key, "mode": "tube", "maxChange": 1}  # Limit to 1 change
     
     try:
         response = requests.get(url, params=params, timeout=10)
@@ -37,17 +37,41 @@ def get_travel_time(start_station_id, end_station_id, api_key, retries=3):
         data = response.json()
         
         if 'journeys' not in data or not data['journeys']:
-            return None
+            return None, []
             
-        return data['journeys'][0]['duration']
+        # Find the journey with fewest changes
+        best_journey = None
+        min_changes = float('inf')
+        
+        for journey in data['journeys']:
+            num_changes = len(journey['legs']) - 1
+            if num_changes < min_changes:
+                min_changes = num_changes
+                best_journey = journey
+        
+        if not best_journey:
+            return None, []
+        
+        duration = best_journey['duration']
+        legs = best_journey['legs']
+        route_details = []
+        
+        for leg in legs:
+            route_details.append({
+                'from': leg['departurePoint']['commonName'],
+                'to': leg['arrivalPoint']['commonName'],
+                'line': leg['routeOptions'][0]['name'] if leg['routeOptions'] else 'Walking'
+            })
+        
+        return duration, route_details
     except requests.exceptions.HTTPError as e:
         if response.status_code == 500 and retries > 0:
             time.sleep(1)
-            return get_travel_time(start_station_id, end_station_id, api_key, retries - 1)
-        return None
+            return get_travel_time_with_routes(start_station_id, end_station_id, api_key, retries - 1)
+        return None, []
     except Exception as e:
         st.error(f"API Error: {e}")
-        return None
+        return None, []
 
 # --- Streamlit UI ---
 st.title("🚇 Tube Meetup Planner")
@@ -163,15 +187,17 @@ if st.button("Find Meeting Point") and len(users) >= 2:
                         best_station = dest['Station']
             
             if best_station:
-                st.success(f"Best meeting point: {best_station}")
-                st.write("Travel times:")
-                for i, time in enumerate(results[best_station]['times']):
-                    st.write(f"User {i+1}: {time} minutes")
+                st.success(f"## Best meeting point: {best_station}")
+    
+                st.write("### Travel Details")
+                for i, (time, route) in enumerate(zip(results[best_station]['times'], 
+                                       results[best_station]['routes'])):
+                    st.write(f"#### Person {i+1}: {time} minutes")
+                    for j, leg in enumerate(route):
+                        st.write(f"{j+1}. From **{leg['from']}** → **{leg['to']}** (via {leg['line']})")
+                    st.write("---")
             else:
                 st.error("Could not find a suitable meeting point")
-                
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
 
 # Add some spacing
 st.markdown("---")
