@@ -89,7 +89,8 @@ if input_mode == "Station Dropdown":
         station = stations_data[stations_data['Station'] == user2_station].iloc[0]
         users.append((station['Latitude'], station['Longitude']))
     
-    st.subheader("Person 3"), st.paragraph("(Optional)")
+    st.subheader("Person 3") 
+    st.caption("(Optional)")
     user3_station = st.selectbox(
         "Select station for User 3 (optional)",
         ["-- Not Selected --"] + stations_data['Station'].tolist(),
