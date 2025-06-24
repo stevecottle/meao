@@ -162,42 +162,43 @@ if st.button("Find Meeting Point") and len(users) >= 2:
             # Find equal-time station
             best_station = None
             min_variance = float('inf')
-            results = {}
+            results = {'times': [], 'routes': []}  # Initialize results with both times and routes
             
             for _, dest in stations.iterrows():
                 times = []
+                routes = []
                 valid = True
                 
                 for start_id in user_stations:
-                    time = get_travel_time(start_id, dest['StationID'], api_key)
+                    time, route = get_travel_time_with_routes(start_id, dest['StationID'], api_key)
                     if not time:
                         valid = False
                         break
                     times.append(time)
+                    routes.append(route)
                 
                 if valid and len(times) == len(users):
                     mean = sum(times) / len(times)
                     variance = sum((t - mean)**2 for t in times) / len(times)
-                    results[dest['Station']] = {
-                        'times': times,
-                        'variance': variance
-                    }
                     if variance < min_variance:
                         min_variance = variance
                         best_station = dest['Station']
+                        results['times'] = times
+                        results['routes'] = routes
             
             if best_station:
                 st.success(f"## Best meeting point: {best_station}")
-    
                 st.write("### Travel Details")
-                for i, (time, route) in enumerate(zip(results[best_station]['times'], 
-                                       results[best_station]['routes'])):
+                for i, (time, route) in enumerate(zip(results['times'], results['routes'])):
                     st.write(f"#### Person {i+1}: {time} minutes")
                     for j, leg in enumerate(route):
                         st.write(f"{j+1}. From **{leg['from']}** → **{leg['to']}** (via {leg['line']})")
                     st.write("---")
             else:
                 st.error("Could not find a suitable meeting point")
+                
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
 
 # Add some spacing
 st.markdown("---")
