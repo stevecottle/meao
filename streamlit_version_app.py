@@ -113,16 +113,6 @@ else:  # Coordinates mode
             lon = st.number_input(f"Person {i+1} Longitude (Optional)", key=f"lon_{i}")
         if lat and lon:  # Only add if both values exist
             users.append((lat, lon))
-else:  # Coordinates mode
-    st.header("Enter User Coordinates")
-    cols = st.columns(3)
-    for i in range(3):
-        with cols[i]:
-            st.subheader(f"User {i+1}")
-            lat = st.number_input("Latitude", key=f"lat{i}")
-            lon = st.number_input("Longitude", key=f"lon{i}")
-            if lat and lon:
-                users.append((lat, lon))
 
 # API Key (consider using st.secrets in production)
 api_key = "f234cac01ae545d2991cc51681a2f820"
