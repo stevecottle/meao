@@ -74,12 +74,11 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
         return None, []
 
 # --- Streamlit UI ---
-st.title("🚇 Tube Meetup Planner")
+st.title("🚇 Meet everyone at once, London!")
 
 # Input Mode Selection
 input_mode = st.radio(
-    "Input Mode:",
-    ["Station Dropdown", "Coordinates"],
+    ["Stations", "Coordinates"],
     index=0,
     horizontal=True
 )
@@ -88,14 +87,14 @@ input_mode = st.radio(
 users = []
 stations_data = load_stations("tube_stations.csv")
 
-if input_mode == "Station Dropdown":
-    st.header("Select Stations for All Travelers")
+if input_mode == "Stations":
+    st.header("Where are you travelling from?")
     
     # Required travelers (first 2)
-    st.markdown("### Required Travelers")
+    st.markdown("### Travellers")
     for i in range(2):
         selected = st.selectbox(
-            f"Person {i+1} (Required)",
+            f"Start station {i+1} (Required)",
             stations_data['Station'].tolist(),
             key=f"station_{i}"
         )
@@ -103,10 +102,10 @@ if input_mode == "Station Dropdown":
         users.append((station['Latitude'], station['Longitude']))
     
     # Optional travelers (last 3)
-    st.markdown("### Optional Travelers")
+    st.markdown("### More Travellers")
     for i in range(2, 5):
         selected = st.selectbox(
-            f"Person {i+1} (Optional)",
+            f"Start station {i+1} (Optional)",
             ["-- Not Selected --"] + stations_data['Station'].tolist(),
             key=f"station_{i}"
         )
@@ -118,7 +117,7 @@ else:  # Coordinates mode
     st.header("Enter Coordinates for All Travelers")
     
     # Required travelers (first 2)
-    st.markdown("### Required Travelers")
+    st.markdown("### More Travellers")
     for i in range(2):
         col1, col2 = st.columns(2)
         with col1:
@@ -128,7 +127,7 @@ else:  # Coordinates mode
         users.append((lat, lon))
     
     # Optional travelers (last 3)
-    st.markdown("### Optional Travelers")
+    st.markdown("### More Travelers")
     for i in range(2, 5):
         col1, col2 = st.columns(2)
         with col1:
@@ -141,8 +140,8 @@ else:  # Coordinates mode
 # API Key (consider using st.secrets in production)
 api_key = "f234cac01ae545d2991cc51681a2f820"
 
-if st.button("Find Meeting Point") and len(users) >= 2:
-    with st.spinner("Calculating best meeting point..."):
+if st.button("Meet everyone at once") and len(users) >= 2:
+    with st.spinner("Calculating station with equal travel time (may take a few minutes) ..."):
         try:
             stations = load_stations("tube_stations.csv")
             
@@ -187,7 +186,7 @@ if st.button("Find Meeting Point") and len(users) >= 2:
                         results['routes'] = routes
             
             if best_station:
-                st.success(f"## Best meeting point: {best_station}")
+                st.success(f"## Meet everyone at one here!: {best_station}")
                 st.write("### Travel Details")
                 for i, (time, route) in enumerate(zip(results['times'], results['routes'])):
                     st.write(f"#### Person {i+1}: {time} minutes")
@@ -195,7 +194,7 @@ if st.button("Find Meeting Point") and len(users) >= 2:
                         st.write(f"{j+1}. From **{leg['from']}** → **{leg['to']}** (via {leg['line']})")
                     st.write("---")
             else:
-                st.error("Could not find a suitable meeting point")
+                st.error("We Couldn't find a suitable station, try altering your stations slightly.")
                 
         except Exception as e:
             st.error(f"An error occurred: {e}")
