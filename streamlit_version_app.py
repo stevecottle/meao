@@ -115,7 +115,7 @@ with st.expander("⚙️ Cache Settings"):
         if 'api_cache' in st.session_state:
             del st.session_state.api_cache
         st.success("Cache cleared!")
-    st.caption(f"Cache stats: {requests_cache.get_cache().response_count()} requests cached")
+    st.caption(f"Cache stats: {len(requests_cache.get_cache().responses)} cached responses")
 
 # ... [REST OF YOUR EXISTING UI CODE REMAINS THE SAME UNTIL THE CALCULATION SECTION] ...
 
