@@ -9,3 +9,4 @@ pandas
 geopy
 requests
 numpy
+requests_cache>=1.0.0
