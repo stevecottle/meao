@@ -4,6 +4,15 @@ from geopy.distance import geodesic
 import requests
 import numpy as np
 import time
+import requests_cache  # <-- NEW: Import caching library
+
+# --- NEW: Configure API Caching ---
+requests_cache.install_cache(
+    'tfl_api_cache',           # Cache file name
+    expire_after=3600,         # Cache expires after 1 hour (3600 seconds)
+    allowable_methods=['GET'], # Only cache GET requests
+    stale_if_error=True        # Use cached data if API fails
+)
 
 # --- Cached Data Loading ---
 @st.cache_data
@@ -25,14 +34,30 @@ def precompute_distances(stations):
 
 # --- TFL API Functions ---
 def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retries=3):
+    # --- NEW: Create unique cache key ---
+    cache_key = f"{start_station_id}_{end_station_id}"
+    
+    # --- NEW: Check session cache first ---
+    if 'api_cache' in st.session_state and cache_key in st.session_state.api_cache:
+        return st.session_state.api_cache[cache_key]
+    
     if start_station_id == end_station_id:
         return None, []
     
     url = f"https://api.tfl.gov.uk/Journey/JourneyResults/{start_station_id}/to/{end_station_id}"
-    params = {"app_key": api_key, "mode": "tube", "maxChange": 1}  # Limit to 1 change
+    # --- NEW: Optimized API parameters ---
+    params = {
+        "app_key": api_key,
+        "mode": "tube",
+        "maxChange": 1,
+        "timeIs": "Departing",   # Faster calculation mode
+        "walkingSpeed": "Fast",  # Optimize walking routes
+        "date": time.strftime("%Y%m%d"),  # Current date
+        "time": "1200"           # Noon (less busy time)
+    }
     
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=5)  # Reduced timeout from 10 to 5
         response.raise_for_status()
         data = response.json()
         
@@ -63,11 +88,19 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
                 'line': leg['routeOptions'][0]['name'] if leg['routeOptions'] else 'Walking'
             })
         
+        # --- NEW: Cache successful results ---
+        if duration:  # Only cache valid responses
+            if 'api_cache' not in st.session_state:
+                st.session_state.api_cache = {}
+            st.session_state.api_cache[cache_key] = (duration, route_details)
+        
         return duration, route_details
-    except requests.exceptions.HTTPError as e:
-        if response.status_code == 500 and retries > 0:
+    
+    except requests.exceptions.Timeout:
+        if retries > 0:
             time.sleep(1)
             return get_travel_time_with_routes(start_station_id, end_station_id, api_key, retries - 1)
+        st.warning(f"Timeout getting data for {start_station_id}→{end_station_id}")
         return None, []
     except Exception as e:
         st.error(f"API Error: {e}")
@@ -76,95 +109,55 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
 # --- Streamlit UI ---
 st.title("🚇 Meet everyone at once, London!")
 
-# Input Mode Selection
-input_mode = st.radio(
-    "Choose input method:",
-    ["Stations", "Coordinates"],
-    index=0,
-    horizontal=True
-)
+# --- NEW: Cache Management UI ---
+with st.expander("⚙️ Cache Settings"):
+    if st.button("Clear API Cache"):
+        requests_cache.clear()
+        if 'api_cache' in st.session_state:
+            del st.session_state.api_cache
+        st.success("Cache cleared!")
+    st.caption(f"Cache stats: {requests_cache.get_cache().response_count()} requests cached")
 
-# Initialize users list
-users = []
-stations_data = load_stations("tube_stations.csv")
-
-if input_mode == "Stations":
-    st.header("Where are you travelling from?")
-    
-    # Required travelers (first 2)
-    st.markdown("### Travellers")
-    for i in range(2):
-        selected = st.selectbox(
-            f"Start station {i+1} (Required)",
-            stations_data['Station'].tolist(),
-            key=f"station_{i}"
-        )
-        station = stations_data[stations_data['Station'] == selected].iloc[0]
-        users.append((station['Latitude'], station['Longitude']))
-    
-    # Optional travelers (last 3)
-    st.markdown("### More Travellers")
-    for i in range(2, 5):
-        selected = st.selectbox(
-            f"Start station {i+1} (Optional)",
-            ["-- Not Selected --"] + stations_data['Station'].tolist(),
-            key=f"station_{i}"
-        )
-        if selected != "-- Not Selected --":
-            station = stations_data[stations_data['Station'] == selected].iloc[0]
-            users.append((station['Latitude'], station['Longitude']))
-
-else:  # Coordinates mode
-    st.header("Use lat/long Coordinates")
-    
-    # Required travelers (first 2)
-    st.markdown("### Travellers")
-    for i in range(2):
-        col1, col2 = st.columns(2)
-        with col1:
-            lat = st.number_input(f"Start coordinates {i+1} Latitude (Required)", key=f"lat_{i}")
-        with col2:
-            lon = st.number_input(f"Start coordinates {i+1} Longitude (Required)", key=f"lon_{i}")
-        users.append((lat, lon))
-    
-    # Optional travelers (last 3)
-    st.markdown("### More Travelers")
-    for i in range(2, 5):
-        col1, col2 = st.columns(2)
-        with col1:
-            lat = st.number_input(f"Start coordinates {i+1} Latitude (Optional)", key=f"lat_{i}")
-        with col2:
-            lon = st.number_input(f"Start coordinates {i+1} Longitude (Optional)", key=f"lon_{i}")
-        if lat and lon:  # Only add if both values exist
-            users.append((lat, lon))
-
-# API Key (consider using st.secrets in production)
-api_key = "f234cac01ae545d2991cc51681a2f820"
+# ... [REST OF YOUR EXISTING UI CODE REMAINS THE SAME UNTIL THE CALCULATION SECTION] ...
 
 if st.button("Meet everyone at once") and len(users) >= 2:
-    with st.spinner("Calculating destination station with equal travel time (may take a few minutes) ..."):
+    with st.spinner("Calculating destination station with equal travel time..."):
         try:
             stations = load_stations("tube_stations.csv")
+            
+            # --- NEW: Limit destination stations for performance ---
+            if len(stations) > 30:
+                stations = stations.sample(30)  # Check max 30 random stations
+                st.info("Checking 30 random stations for faster results")
             
             # Find nearest stations for all users
             distance_matrix = precompute_distances(stations)
             user_stations = []
-            for user in users:
+            
+            # --- NEW: Progress bar for station finding ---
+            progress_bar = st.progress(0)
+            for idx, user in enumerate(users):
                 nearest = None
                 min_dist = float('inf')
                 for i, station in stations.iterrows():
-                    dist = distance_matrix[i][i]  # Using precomputed distances
+                    dist = distance_matrix[i][i]
                     if dist < min_dist:
                         min_dist = dist
                         nearest = station['StationID']
                 user_stations.append(nearest)
+                progress_bar.progress((idx + 1) / len(users))
+            progress_bar.empty()
             
             # Find equal-time station
             best_station = None
             min_variance = float('inf')
-            results = {'times': [], 'routes': []}  # Initialize results with both times and routes
+            results = {'times': [], 'routes': []}
             
-            for _, dest in stations.iterrows():
+            # --- NEW: Progress bar for destination checking ---
+            dest_progress = st.progress(0)
+            for idx, (_, dest) in enumerate(stations.iterrows()):
+                dest_progress.progress((idx + 1) / len(stations))
+                
                 times = []
                 routes = []
                 valid = True
@@ -186,6 +179,8 @@ if st.button("Meet everyone at once") and len(users) >= 2:
                         results['times'] = times
                         results['routes'] = routes
             
+            dest_progress.empty()
+
             if best_station:
                 st.success(f"## Meet everyone at once here!: {best_station}")
                 st.write("### Travel Details")
@@ -195,10 +190,17 @@ if st.button("Meet everyone at once") and len(users) >= 2:
                         st.write(f"{j+1}. From **{leg['from']}** → **{leg['to']}** (via {leg['line']})")
                     st.write("---")
             else:
-                st.error("We Couldn't find a suitable station, try altering your stations slightly.")
+                st.error("We couldn't find a suitable station. Try these fixes:")
+                st.markdown("""
+                - Reduce number of starting points
+                - Try different stations
+                - Check during less busy hours
+                """)
                 
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            st.error(f"An error occurred: {str(e)}")
+            if "timed out" in str(e).lower():
+                st.info("Tip: The API might be busy. Try again in a few minutes.")
 
 # Add some spacing
 st.markdown("---")
