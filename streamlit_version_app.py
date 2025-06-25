@@ -118,13 +118,13 @@ else:  # Coordinates mode
     st.header("Enter Coordinates for All Travelers")
     
     # Required travelers (first 2)
-    st.markdown("### More Travellers")
+    st.markdown("### Travellers")
     for i in range(2):
         col1, col2 = st.columns(2)
         with col1:
-            lat = st.number_input(f"Person {i+1} Latitude (Required)", key=f"lat_{i}")
+            lat = st.number_input(f"Start station {i+1} Latitude (Required)", key=f"lat_{i}")
         with col2:
-            lon = st.number_input(f"Person {i+1} Longitude (Required)", key=f"lon_{i}")
+            lon = st.number_input(f"Start station {i+1} Longitude (Required)", key=f"lon_{i}")
         users.append((lat, lon))
     
     # Optional travelers (last 3)
@@ -132,9 +132,9 @@ else:  # Coordinates mode
     for i in range(2, 5):
         col1, col2 = st.columns(2)
         with col1:
-            lat = st.number_input(f"Person {i+1} Latitude (Optional)", key=f"lat_{i}")
+            lat = st.number_input(f"Start station {i+1} Latitude (Optional)", key=f"lat_{i}")
         with col2:
-            lon = st.number_input(f"Person {i+1} Longitude (Optional)", key=f"lon_{i}")
+            lon = st.number_input(f"Start station {i+1} Longitude (Optional)", key=f"lon_{i}")
         if lat and lon:  # Only add if both values exist
             users.append((lat, lon))
 
@@ -142,7 +142,7 @@ else:  # Coordinates mode
 api_key = "f234cac01ae545d2991cc51681a2f820"
 
 if st.button("Meet everyone at once") and len(users) >= 2:
-    with st.spinner("Calculating station with equal travel time (may take a few minutes) ..."):
+    with st.spinner("Calculating destination station with equal travel time (may take a few minutes) ..."):
         try:
             stations = load_stations("tube_stations.csv")
             
@@ -187,7 +187,7 @@ if st.button("Meet everyone at once") and len(users) >= 2:
                         results['routes'] = routes
             
             if best_station:
-                st.success(f"## Meet everyone at one here!: {best_station}")
+                st.success(f"## Meet everyone at once here!: {best_station}")
                 st.write("### Travel Details")
                 for i, (time, route) in enumerate(zip(results['times'], results['routes'])):
                     st.write(f"#### Person {i+1}: {time} minutes")
@@ -202,4 +202,4 @@ if st.button("Meet everyone at once") and len(users) >= 2:
 
 # Add some spacing
 st.markdown("---")
-st.caption("Note: Uses TfL API for real-time travel data")
+st.caption("We use TfL API for real-time travel data")
