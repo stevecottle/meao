@@ -53,7 +53,6 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
         "timeIs": "Departing",   # Faster calculation mode
         "walkingSpeed": "Fast",  # Optimize walking routes
         "date": time.strftime("%Y%m%d"),  # Current date
-        "time": "1200"           # Noon (less busy time)
     }
     
     try:
