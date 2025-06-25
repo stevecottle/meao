@@ -115,16 +115,16 @@ if input_mode == "Stations":
             users.append((station['Latitude'], station['Longitude']))
 
 else:  # Coordinates mode
-    st.header("Enter Coordinates for All Travelers")
+    st.header("Use lat/long Coordinates")
     
     # Required travelers (first 2)
     st.markdown("### Travellers")
     for i in range(2):
         col1, col2 = st.columns(2)
         with col1:
-            lat = st.number_input(f"Start station {i+1} Latitude (Required)", key=f"lat_{i}")
+            lat = st.number_input(f"Start coordinates {i+1} Latitude (Required)", key=f"lat_{i}")
         with col2:
-            lon = st.number_input(f"Start station {i+1} Longitude (Required)", key=f"lon_{i}")
+            lon = st.number_input(f"Start coordinates {i+1} Longitude (Required)", key=f"lon_{i}")
         users.append((lat, lon))
     
     # Optional travelers (last 3)
@@ -132,9 +132,9 @@ else:  # Coordinates mode
     for i in range(2, 5):
         col1, col2 = st.columns(2)
         with col1:
-            lat = st.number_input(f"Start station {i+1} Latitude (Optional)", key=f"lat_{i}")
+            lat = st.number_input(f"Start coordinates {i+1} Latitude (Optional)", key=f"lat_{i}")
         with col2:
-            lon = st.number_input(f"Start station {i+1} Longitude (Optional)", key=f"lon_{i}")
+            lon = st.number_input(f"Start coordinates {i+1} Longitude (Optional)", key=f"lon_{i}")
         if lat and lon:  # Only add if both values exist
             users.append((lat, lon))
 
