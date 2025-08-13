@@ -248,4 +248,4 @@ if st.button("Meet everyone at once!", type="primary") and len(st.session_state.
 
 # --- Clear All Button ---
 st.markdown("---")
-st.caption("🚇 Using TfL API for real-time
+st.caption("🚇 Using TfL API for real-time travel data")
