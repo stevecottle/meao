@@ -128,14 +128,16 @@ except Exception as e:
 if 'user_stations' not in st.session_state:
     st.session_state.user_stations = []
 
-# --- Dropdown + Add Button (aligned horizontally) ---
+# --- Dropdown + Add Button (horizontal alignment) ---
 st.markdown("<br>", unsafe_allow_html=True)
 st.caption("Choose a station:")
 
+# Create columns: dropdown takes more width, button smaller
 col1, col2 = st.columns([3, 1])
 with col1:
+    # No label inside selectbox
     selected_station = st.selectbox(
-        " ",  # empty label to avoid extra space
+        label=None,
         options=["Select a station..."] + station_names,
         key="station_dropdown"
     )
