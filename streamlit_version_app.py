@@ -162,11 +162,11 @@ if st.session_state.user_stations:
                 st.rerun()
 
 if len(st.session_state.user_stations) < 2:
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     st.info("ℹ️ Add at least 2 starting stations to find a meeting point")
 
 # --- CALCULATION SECTION ---
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
 if st.button("Meet everyone at once!", type="primary") and len(st.session_state.user_stations) >= 2:
     with st.spinner("Calculating destination station with equal travel time..."):
         try:
