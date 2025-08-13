@@ -69,7 +69,7 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
         for leg in legs:
             if leg.get('routeOptions'):
                 line_name = leg['routeOptions'][0].get('name', '').strip()
-                if line_name:  # Only keep legs with a line name
+                if line_name:  # Only include tube legs
                     route_details.append({
                         'from': leg['departurePoint']['commonName'],
                         'to': leg['arrivalPoint']['commonName'],
@@ -112,13 +112,11 @@ with st.expander("⚙️ Cache Settings"):
         st.caption("Cache stats: 0 cached responses")
 
 # --- User Input Section ---
-st.write("") # Add spacing
-st.write("") # Add spacing
-st.write("") # Add spacing
+st.markdown("<br><br>", unsafe_allow_html=True)
 st.subheader("📍 Starting Stations")
-st.write("Select the tube stations where each person will start from:")
+st.caption("Select the tube stations where each person will start from:")
 
-# Load stations for dropdown
+# Load stations
 try:
     stations_df = load_stations("tube_stations_complete.csv")
     station_names = sorted(stations_df['Station'].tolist())
@@ -126,16 +124,17 @@ except Exception as e:
     st.error(f"Could not load tube_stations_complete.csv file: {e}")
     st.stop()
 
-# Initialize users list in session state
+# Initialize session state
 if 'user_stations' not in st.session_state:
     st.session_state.user_stations = []
 
-# Add user interface
-st.write("") # Add spacing
+# --- Dropdown + Add Button (horizontal) ---
+st.markdown("<br>", unsafe_allow_html=True)
+st.caption("Choose a station:")
 col1, col2 = st.columns([3, 1])
 with col1:
     selected_station = st.selectbox(
-        "Choose a station:", 
+        "",  # no label here
         options=["Select a station..."] + station_names,
         key="station_dropdown"
     )
@@ -145,8 +144,9 @@ with col2:
             st.session_state.user_stations.append(selected_station)
             st.rerun()
 
-# Display current stations
+# --- Current Stations Display ---
 if st.session_state.user_stations:
+    st.markdown("<br>", unsafe_allow_html=True)
     st.write("**Current starting stations:**")
     for i, station in enumerate(st.session_state.user_stations):
         col1, col2 = st.columns([4, 1])
@@ -158,15 +158,11 @@ if st.session_state.user_stations:
                 st.rerun()
 
 if len(st.session_state.user_stations) < 2:
-    st.write("") # Add spacing
-    st.write("") # Add spacing
-    st.write("") # Add spacing
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.info("ℹ️ Add at least 2 starting stations to find a meeting point")
 
 # --- CALCULATION SECTION ---
-st.write("") # Add spacing
-st.write("") # Add spacing
-st.write("") # Add spacing
+st.markdown("<br>", unsafe_allow_html=True)
 if st.button("Meet everyone at once!", type="primary") and len(st.session_state.user_stations) >= 2:
     with st.spinner("Calculating destination station with equal travel time..."):
         try:
@@ -185,14 +181,12 @@ if st.button("Meet everyone at once!", type="primary") and len(st.session_state.
                     st.error(f"Could not find station: {user_station_name}")
                     st.stop()
             
-            # Midpoint
             midpoint = (
                 sum(c[0] for c in user_coords) / len(user_coords),
                 sum(c[1] for c in user_coords) / len(user_coords)
             )
             st.info(f"📍 Geographic center point: {midpoint[0]:.4f}, {midpoint[1]:.4f}")
             
-            # Nearby stations
             radius_km = 5
             nearby_stations = [s for _, s in stations.iterrows()
                                if geodesic(midpoint, (s['Latitude'], s['Longitude'])).km <= radius_km]
@@ -203,7 +197,6 @@ if st.button("Meet everyone at once!", type="primary") and len(st.session_state.
             
             st.info(f"🔍 Checking {len(nearby_stations)} stations within {radius_km} km")
             
-            # Find equal-time destination
             best_station = None
             min_variance = float('inf')
             results = {'times': [], 'routes': []}
@@ -257,5 +250,6 @@ if st.button("Meet everyone at once!", type="primary") and len(st.session_state.
                 st.info("💡 API might be busy. Try again in a few minutes.")
 
 # --- Clear All Button ---
+st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("---")
 st.caption("🚇 Using TfL API for real-time travel data")
