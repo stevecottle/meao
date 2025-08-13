@@ -135,12 +135,13 @@ st.caption("Choose a station:")
 # Create columns: dropdown takes more width, button smaller
 col1, col2 = st.columns([3, 1])
 with col1:
-    # No label inside selectbox
     selected_station = st.selectbox(
-        label=None,
+        label="Choose a station",
         options=["Select a station..."] + station_names,
-        key="station_dropdown"
+        key="station_dropdown",
+        label_visibility="collapsed"
     )
+
 with col2:
     if st.button("Add Station", type="secondary"):
         if selected_station != "Select a station..." and selected_station not in st.session_state.user_stations:
