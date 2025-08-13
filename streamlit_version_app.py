@@ -120,10 +120,10 @@ st.write("Select the tube stations where each person will start from:")
 
 # Load stations for dropdown
 try:
-    stations_df = load_stations("tube_stations.csv")
+    stations_df = load_stations("tube_stations_complete.csv")
     station_names = sorted(stations_df['Station'].tolist())
 except Exception as e:
-    st.error(f"Could not load tube_stations.csv file: {e}")
+    st.error(f"Could not load tube_stations_complete.csv file: {e}")
     st.stop()
 
 # Initialize users list in session state
@@ -170,7 +170,7 @@ st.write("") # Add spacing
 if st.button("Meet everyone at once!", type="primary") and len(st.session_state.user_stations) >= 2:
     with st.spinner("Calculating destination station with equal travel time..."):
         try:
-            stations = load_stations("tube_stations.csv")
+            stations = load_stations("tube_stations_complete.csv")
             users = st.session_state.user_stations
             user_coords = []
             user_station_ids = []
