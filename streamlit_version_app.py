@@ -137,7 +137,7 @@ col1, col2 = st.columns([3, 1])
 with col1:
     selected_station = st.selectbox(
         label="Choose a station",
-        options=["Select a station..."] + station_names,
+        options=["Start typing station name..."] + station_names,
         key="station_dropdown",
         label_visibility="collapsed"
     )
