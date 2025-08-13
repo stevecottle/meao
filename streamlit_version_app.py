@@ -131,6 +131,7 @@ if 'user_stations' not in st.session_state:
     st.session_state.user_stations = []
 
 # Add user interface
+st.write("") # Add spacing
 col1, col2 = st.columns([3, 1])
 with col1:
     selected_station = st.selectbox(
@@ -157,6 +158,9 @@ if st.session_state.user_stations:
                 st.rerun()
 
 if len(st.session_state.user_stations) < 2:
+    st.write("") # Add spacing
+    st.write("") # Add spacing
+    st.write("") # Add spacing
     st.info("ℹ️ Add at least 2 starting stations to find a meeting point")
 
 # --- CALCULATION SECTION ---
