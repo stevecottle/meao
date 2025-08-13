@@ -112,6 +112,9 @@ with st.expander("⚙️ Cache Settings"):
         st.caption("Cache stats: 0 cached responses")
 
 # --- User Input Section ---
+st.write("") # Add spacing
+st.write("") # Add spacing
+st.write("") # Add spacing
 st.subheader("📍 Starting Locations")
 st.write("Select the tube stations where each person will start from:")
 
