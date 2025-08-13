@@ -117,8 +117,56 @@ with st.expander("⚙️ Cache Settings"):
         st.success("Cache cleared!")
     st.caption(f"Cache stats: {len(requests_cache.get_cache().responses)} cached responses")
 
-# ... [REST OF YOUR EXISTING UI CODE REMAINS THE SAME UNTIL THE CALCULATION SECTION] ...
+# --- API Key Input ---
+st.subheader("🔑 TfL API Configuration")
+api_key = st.text_input(
+    "Enter your TfL API Key", 
+    type="password", 
+    help="Get your free API key from https://api-portal.tfl.gov.uk/"
+)
 
+if not api_key:
+    st.warning("⚠️ Please enter your TfL API key to continue")
+    st.stop()
+
+# --- User Input Section ---
+st.subheader("📍 Starting Locations")
+st.write("Add the tube stations where each person will start from:")
+
+# Initialize users list in session state
+if 'users' not in st.session_state:
+    st.session_state.users = []
+
+# Add user interface
+col1, col2 = st.columns([3, 1])
+with col1:
+    new_station = st.text_input("Station name (e.g., 'King's Cross St. Pancras')", key="station_input")
+with col2:
+    if st.button("Add Station"):
+        if new_station and new_station not in st.session_state.users:
+            st.session_state.users.append(new_station)
+            # Clear the input by rerunning
+            st.rerun()
+
+# Display current users
+users = st.session_state.users  # This is the variable that was missing!
+
+if users:
+    st.write("**Current starting stations:**")
+    for i, user in enumerate(users):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(f"{i+1}. {user}")
+        with col2:
+            if st.button("Remove", key=f"remove_{i}"):
+                st.session_state.users.pop(i)
+                st.rerun()
+
+# Show minimum requirement
+if len(users) < 2:
+    st.info("ℹ️ Add at least 2 starting stations to find a meeting point")
+
+# --- CALCULATION SECTION ---
 if st.button("Meet everyone at once") and len(users) >= 2:
     with st.spinner("Calculating destination station with equal travel time..."):
         try:
