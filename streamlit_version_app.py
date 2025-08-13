@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from geopy.distance import geodesic
 import requests
-import numpy as np
 import time
 import requests_cache
 
@@ -36,6 +35,7 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
     params = {
         "app_key": api_key,
         "mode": "tube",
+        "maxChange": 1,
         "timeIs": "Departing",
         "walkingSpeed": "Fast",
         "date": time.strftime("%Y%m%d"),
@@ -49,7 +49,7 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
         if 'journeys' not in data or not data['journeys']:
             return None, []
             
-        # Pick the journey with the fewest changes
+        # Find the journey with fewest changes
         best_journey = None
         min_changes = float('inf')
         for journey in data['journeys']:
@@ -65,14 +65,18 @@ def get_travel_time_with_routes(start_station_id, end_station_id, api_key, retri
         legs = best_journey['legs']
         route_details = []
         
+        # --- Filter only Tube (subway) legs ---
         for leg in legs:
-            route_details.append({
-                'from': leg['departurePoint']['commonName'],
-                'to': leg['arrivalPoint']['commonName'],
-                'line': leg['routeOptions'][0]['name'] if leg['routeOptions'] else 'Walking'
-            })
+            if leg.get('routeOptions'):
+                line_name = leg['routeOptions'][0].get('name', '').strip()
+                if line_name:  # Only keep legs with a line name
+                    route_details.append({
+                        'from': leg['departurePoint']['commonName'],
+                        'to': leg['arrivalPoint']['commonName'],
+                        'line': line_name
+                    })
         
-        # Cache the result
+        # Cache successful results
         if duration:
             if 'api_cache' not in st.session_state:
                 st.session_state.api_cache = {}
@@ -100,6 +104,7 @@ with st.expander("⚙️ Cache Settings"):
         if 'api_cache' in st.session_state:
             del st.session_state.api_cache
         st.success("Cache cleared!")
+    
     try:
         cache_size = len(requests_cache.get_cache().responses)
         st.caption(f"Cache stats: {cache_size} cached responses")
@@ -110,6 +115,7 @@ with st.expander("⚙️ Cache Settings"):
 st.subheader("📍 Starting Locations")
 st.write("Select the tube stations where each person will start from:")
 
+# Load stations for dropdown
 try:
     stations_df = load_stations("tube_stations.csv")
     station_names = sorted(stations_df['Station'].tolist())
@@ -117,9 +123,11 @@ except Exception as e:
     st.error(f"Could not load tube_stations.csv file: {e}")
     st.stop()
 
+# Initialize users list in session state
 if 'user_stations' not in st.session_state:
     st.session_state.user_stations = []
 
+# Add user interface
 col1, col2 = st.columns([3, 1])
 with col1:
     selected_station = st.selectbox(
@@ -133,6 +141,7 @@ with col2:
             st.session_state.user_stations.append(selected_station)
             st.rerun()
 
+# Display current stations
 if st.session_state.user_stations:
     st.write("**Current starting stations:**")
     for i, station in enumerate(st.session_state.user_stations):
@@ -153,97 +162,90 @@ if st.button("Meet everyone at once!", type="primary") and len(st.session_state.
         try:
             stations = load_stations("tube_stations.csv")
             users = st.session_state.user_stations
-            
             user_coords = []
-            user_stations_ids = []
+            user_station_ids = []
+            
             for user_station_name in users:
                 row = stations[stations['Station'] == user_station_name]
                 if not row.empty:
                     station_data = row.iloc[0]
                     user_coords.append((station_data['Latitude'], station_data['Longitude']))
-                    user_stations_ids.append(station_data['StationID'])
+                    user_station_ids.append(station_data['StationID'])
                 else:
                     st.error(f"Could not find station: {user_station_name}")
                     st.stop()
             
-            midpoint_lat = sum(c[0] for c in user_coords) / len(user_coords)
-            midpoint_lon = sum(c[1] for c in user_coords) / len(user_coords)
-            midpoint = (midpoint_lat, midpoint_lon)
+            # Midpoint
+            midpoint = (
+                sum(c[0] for c in user_coords) / len(user_coords),
+                sum(c[1] for c in user_coords) / len(user_coords)
+            )
+            st.info(f"📍 Geographic center point: {midpoint[0]:.4f}, {midpoint[1]:.4f}")
             
-            st.info(f"📍 Geographic center point: {midpoint_lat:.4f}, {midpoint_lon:.4f}")
-            
+            # Nearby stations
             radius_km = 5
-            nearby_stations = []
-            for _, station in stations.iterrows():
-                dist = geodesic(midpoint, (station['Latitude'], station['Longitude'])).km
-                if dist <= radius_km:
-                    nearby_stations.append(station)
+            nearby_stations = [s for _, s in stations.iterrows()
+                               if geodesic(midpoint, (s['Latitude'], s['Longitude'])).km <= radius_km]
             
             if not nearby_stations:
-                st.warning(f"No stations found within {radius_km}km of center point.")
+                st.warning(f"No stations within {radius_km} km of midpoint.")
                 st.stop()
             
-            st.info(f"🔍 Checking {len(nearby_stations)} stations within {radius_km}km radius")
+            st.info(f"🔍 Checking {len(nearby_stations)} stations within {radius_km} km")
             
+            # Find equal-time destination
             best_station = None
             min_variance = float('inf')
             results = {'times': [], 'routes': []}
-            
             dest_progress = st.progress(0)
-            for idx, dest_station in enumerate(nearby_stations):
+            
+            for idx, dest in enumerate(nearby_stations):
                 dest_progress.progress((idx + 1) / len(nearby_stations))
-                
-                times = []
-                routes = []
+                times, routes = [], []
                 valid = True
-                for start_id in user_stations_ids:
-                    travel_time, route = get_travel_time_with_routes(start_id, dest_station['StationID'], api_key)
+                for start_id in user_station_ids:
+                    travel_time, route = get_travel_time_with_routes(start_id, dest['StationID'], api_key)
                     if not travel_time:
                         valid = False
                         break
                     times.append(travel_time)
                     routes.append(route)
-                
                 if valid and len(times) == len(users):
                     mean_time = sum(times) / len(times)
-                    variance = sum((t - mean_time)**2 for t in times) / len(times)
+                    variance = sum((t - mean_time) ** 2 for t in times) / len(times)
                     if variance < min_variance:
                         min_variance = variance
-                        best_station = dest_station['Station']
+                        best_station = dest['Station']
                         results['times'] = times
                         results['routes'] = routes
             
             dest_progress.empty()
-
+            
             if best_station:
                 st.success(f"## 🎯 Meet everyone at: {best_station}")
                 st.write("### 🚇 Travel Details")
                 
-                for i, (travel_time, route) in enumerate(zip(results['times'], results['routes'])):
-                    st.write(f"#### Person {i+1} from {users[i]}: {travel_time} minutes")
-                    
-                    # Build readable route with changes
+                for i, (time_min, route) in enumerate(zip(results['times'], results['routes'])):
+                    st.write(f"#### Person {i+1} from {users[i]}: {time_min} minutes")
                     for j, leg in enumerate(route):
-                        line_name = leg['line'] if leg['line'] else "Walking"
                         if j == 0:
                             st.markdown(f"**Start:** {leg['from']}")
                         else:
                             st.markdown(f"**Change at:** {leg['from']}")
-                        st.markdown(f"→ **{leg['to']}** _(via {line_name})_")
-                    
+                        st.markdown(f"→ **{leg['to']}** _(via {leg['line']})_")
                     st.markdown("---")
                 
                 avg_time = sum(results['times']) / len(results['times'])
                 max_diff = max(results['times']) - min(results['times'])
-                st.info(f"📊 Average travel time: {avg_time:.1f} minutes | Maximum difference: {max_diff:.1f} minutes")
+                st.info(f"📊 Average travel time: {avg_time:.1f} minutes | Max difference: {max_diff:.1f} minutes")
             else:
-                st.error("❌ Couldn't find a suitable meeting station.")
-                
+                st.error("❌ Couldn't find a suitable meeting station. Try stations closer together or different starting stations.")
+        
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
+            if "timed out" in str(e).lower():
+                st.info("💡 API might be busy. Try again in a few minutes.")
 
-# Clear all button
-if st.session_state.user_stations:
-    if st.button("🗑️ Clear All Stations"):
-        st.session_state.user_stations = []
-        st.rerun()
+# --- Clear All Button ---
+st.markdown("---")
+st.caption("🚇 Using TfL API for real-time
