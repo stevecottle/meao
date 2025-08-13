@@ -140,7 +140,7 @@ with col1:
         key="station_dropdown"
     )
 with col2:
-    if st.button("Add Station", type="primary"):
+    if st.button("Add Station", type="secondary"):
         if selected_station != "Select a station..." and selected_station not in st.session_state.user_stations:
             st.session_state.user_stations.append(selected_station)
             st.rerun()
@@ -164,6 +164,9 @@ if len(st.session_state.user_stations) < 2:
     st.info("ℹ️ Add at least 2 starting stations to find a meeting point")
 
 # --- CALCULATION SECTION ---
+st.write("") # Add spacing
+st.write("") # Add spacing
+st.write("") # Add spacing
 if st.button("Meet everyone at once!", type="primary") and len(st.session_state.user_stations) >= 2:
     with st.spinner("Calculating destination station with equal travel time..."):
         try:
