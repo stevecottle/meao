@@ -115,7 +115,7 @@ with st.expander("⚙️ Cache Settings"):
 st.write("") # Add spacing
 st.write("") # Add spacing
 st.write("") # Add spacing
-st.subheader("📍 Starting Locations")
+st.subheader("📍 Starting Stations")
 st.write("Select the tube stations where each person will start from:")
 
 # Load stations for dropdown
